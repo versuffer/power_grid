@@ -1,0 +1,11 @@
+# IDE settings
+.idea/
+
+# Virtual environment
+venv/
+
+# Database files
+*.sqlite3
+
+# Pycache
+*__pycache__/
