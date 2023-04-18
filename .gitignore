@@ -9,3 +9,6 @@ venv/
 
 # Pycache
 *__pycache__/
+
+# Config files
+*.cfg
