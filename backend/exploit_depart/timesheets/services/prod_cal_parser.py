@@ -1,31 +1,45 @@
 import calendar
-import itertools
 import re
 from datetime import date
+from functools import lru_cache
 
 import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 
 
+@lru_cache
+def get_default_calendar_dict(year):
+    def _filter_date(date_obj):
+        if date_obj.year == year:
+            return True
+        return False
+
+    def _sublist_to_set(list_obj):
+        for item in list_obj:
+            if isinstance(item, list):
+                _sublist_to_set(item)
+
+            elif _filter_date(item):
+                date_set.add(item)
+
+    date_set = set()
+    raw_data = calendar.Calendar().yeardatescalendar(year=year)
+    _sublist_to_set(raw_data)
+
+    calendar_dict = {}
+    for date_obj in date_set:
+        day_status = "Рабочий день"
+
+        if date_obj.weekday() in [5, 6]:
+            day_status = "Выходной"
+
+        calendar_dict[date_obj.isoformat()] = day_status
+    return calendar_dict
+
+
 def get_prod_calendar_dict():
-    """This function gets production calendar from HeadHunter (07.04.2023)"""
-
-    def get_raw_calendar_dict(year):
-        raw_data = calendar.Calendar().yeardayscalendar(year)
-        raw_data = list(itertools.chain(*raw_data))
-
-        months = [
-            list(filter(lambda num: num != 0, itertools.chain(*month)))
-            for month in raw_data
-        ]
-        result = dict()
-        for index, month in enumerate(months, 1):
-            for day in month:
-                result.update(
-                    {date(year=year, month=index, day=day).isoformat(): "Рабочий день"}
-                )
-        return result
+    """This function gets production calendar from HeadHunter"""
 
     # Get raw html
     url = "https://hh.ru/calendar"
@@ -62,30 +76,35 @@ def get_prod_calendar_dict():
         for month in months
     ]
 
-    # Get raw calendar dictionary
-    result = get_raw_calendar_dict(year=year)
+    # Get default calendar dictionary
+    default_calendar = get_default_calendar_dict(year=year)
+    result = default_calendar.copy()
 
-    # Filling raw calendar dictionary with days-off and shortened days
-    for index, month in enumerate(months, start=1):
-        for day in month:
-            day = day.__str__()
-            day_number = int(re.search(r"\d{1,2}", day)[0])
-            if re.search("calendar-list__numbers__item_day-off", day) is not None:
-                result.update(
-                    {
-                        date(
-                            year=year, month=index, day=day_number
-                        ).isoformat(): "Выходной"
-                    }
-                )
-                continue
-            if re.search("calendar-list__numbers__item_shortened", day) is not None:
-                result.update(
-                    {
-                        date(
-                            year=year, month=index, day=day_number
-                        ).isoformat(): "Сокращённый день"
-                    }
-                )
-                continue
+    try:
+        # Filling raw calendar dictionary with days-off and shortened days
+        for index, month in enumerate(months, start=1):
+            for day in month:
+                day = day.__str__()
+                day_number = int(re.search(r"\d{1,2}", day)[0])
+                if re.search("calendar-list__numbers__item_day-off", day) is not None:
+                    result.update(
+                        {
+                            date(
+                                year=year, month=index, day=day_number
+                            ).isoformat(): "Выходной"
+                        }
+                    )
+                    continue
+                if re.search("calendar-list__numbers__item_shortened", day) is not None:
+                    result.update(
+                        {
+                            date(
+                                year=year, month=index, day=day_number
+                            ).isoformat(): "Сокращённый день"
+                        }
+                    )
+                    continue
+    except:
+        return default_calendar
+
     return result
