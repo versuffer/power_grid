@@ -1,6 +1,6 @@
 import calendar
 import re
-from datetime import date
+from datetime import datetime, date
 from functools import lru_cache
 
 import requests
@@ -38,50 +38,50 @@ def get_default_calendar_dict(year):
     return calendar_dict
 
 
-def get_prod_calendar_dict():
+def get_prod_calendar_dict(year=datetime.now().year):
     """This function gets production calendar from HeadHunter"""
-
-    # Get raw html
-    url = "https://hh.ru/calendar"
-    headers = {"User-Agent": UserAgent().chrome}
-    html_doc = requests.get(url=url, headers=headers)
-    soup = BeautifulSoup(html_doc.text, features="html.parser")
-
-    # Get production calendar year
-    calendar_data = soup.find(class_="calendar")
-    calendar_title = calendar_data.find("h1").text
-    year = int(re.search(r"202\d", calendar_title)[0])
-
-    # Get quarters data
-    quarters = calendar_data.find_all(class_="calendar-list")
-
-    # Get months data
-    months = []
-    for quarter in quarters:
-        months.extend(quarter.find_all(class_="calendar-list__item"))
-
-    # Clear data
-    for month in months:
-        for elem in month.find_all(class_=["calendar-hint"]):
-            elem.decompose()
-
-    # Leave only shortened days and days-off
-    months = [
-        month.find_all(
-            class_=[
-                "calendar-list__numbers__item_day-off",
-                "calendar-list__numbers__item_shortened",
-            ]
-        )
-        for month in months
-    ]
 
     # Get default calendar dictionary
     default_calendar = get_default_calendar_dict(year=year)
-    result = default_calendar.copy()
 
     try:
-        # Filling raw calendar dictionary with days-off and shortened days
+        # Get raw html
+        url = "https://hh.ru/calendar"
+        headers = {"User-Agent": UserAgent().chrome}
+        html_doc = requests.get(url=url, headers=headers)
+        soup = BeautifulSoup(html_doc.text, features="html.parser")
+
+        # Get calendar data
+        calendar_data = soup.find(class_="calendar")
+
+        # Get quarters data
+        quarters = calendar_data.find_all(class_="calendar-list")
+
+        # Get months data
+        months = []
+        for quarter in quarters:
+            months.extend(quarter.find_all(class_="calendar-list__item"))
+
+        # Clear data
+        for month in months:
+            for elem in month.find_all(class_=["calendar-hint"]):
+                elem.decompose()
+
+        # Leave shortened days and days-off only
+        months = [
+            month.find_all(
+                class_=[
+                    "calendar-list__numbers__item_day-off",
+                    "calendar-list__numbers__item_shortened",
+                ]
+            )
+            for month in months
+        ]
+
+        # Setup result dictionary
+        result = default_calendar.copy()
+
+        # Filling default calendar dictionary with days-off and shortened days
         for index, month in enumerate(months, start=1):
             for day in month:
                 day = day.__str__()
