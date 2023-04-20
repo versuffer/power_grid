@@ -13,7 +13,6 @@ def get_default_calendar_dict(year):
     def _filter_date(date_obj):
         if date_obj.year == year:
             return True
-        return False
 
     def _sublist_to_set(list_obj):
         for item in list_obj:
@@ -38,10 +37,11 @@ def get_default_calendar_dict(year):
     return calendar_dict
 
 
-def get_prod_calendar_dict(year=datetime.now().year):
-    """This function gets production calendar from HeadHunter"""
+def get_prod_calendar_dict():
+    """This function gets actual production calendar from HeadHunter"""
 
     # Get default calendar dictionary
+    year = datetime.now().year
     default_calendar = get_default_calendar_dict(year=year)
 
     try:
