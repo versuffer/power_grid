@@ -7,8 +7,9 @@ venv/
 # Database files
 *.sqlite3
 
-# Pycache
+# Cache
 *__pycache__/
+*.pytest_cache
 
 # Config files
 *.cfg
